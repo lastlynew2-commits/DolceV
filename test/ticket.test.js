@@ -23,6 +23,7 @@ const {
   orderCompletionReminderEmbed,
   warrantyActivatedContainer,
   dmsOrderMessage,
+  dmsOrderProductButtons,
   dmsOrderFormModal,
   dmsOrderFormButtons,
   vouchReminderContainer,
@@ -992,6 +993,16 @@ test('/dmsorder opens separate item and link fields in up to three modal steps',
     ['dmsorder:next:form-123:3', 'Add items 3–4'],
     ['dmsorder:send:form-123', 'Send order DM'],
   ]);
+  assert.ok(dmsOrderFormButtons('form-123', 5, 'NAYTRO').toJSON().components
+    .some(({ label }) => label === 'Submit'));
+  assert.ok(dmsOrderFormButtons('form-123', 5, 'DEKOR').toJSON().components
+    .some(({ label }) => label === 'Submit'));
+  const productButtons = dmsOrderProductButtons('form-123').toJSON().components;
+  assert.deepEqual(productButtons.map(({ custom_id, label }) => [custom_id, label]), [
+    ['dmsorder:product:form-123:NAYTRO', 'NAYTRO'],
+    ['dmsorder:product:form-123:PREMS', 'PREMS'],
+    ['dmsorder:product:form-123:DEKOR', 'DEKOR'],
+  ]);
 });
 
 test('order DM form parses item/link pairs and validates optional entries', () => {
@@ -1022,6 +1033,35 @@ test('order DM message preserves the warranty text and spoiler-wraps the link', 
   assert.match(message, /link        invalid        =        no      regen/);
   assert.match(message, /12        hours         voids        warranty/);
   assert.match(message, /tysm for buying!/);
+  assert.match(dmsOrderMessage([], 'PREMS'), /Product: PREMS/);
+});
+
+test('NAYTRO order DM uses its policy layout and censors every submitted link', () => {
+  const message = dmsOrderMessage([
+    { item: 'Item one', link: 'https://example.com/1' },
+    { item: 'Item two', link: 'https://example.com/2' },
+  ], 'NAYTRO');
+  assert.match(message, /\*\*__a   gift   from   𝓓olce   𝓥ita__\*\*/);
+  assert.match(message, /Item one   :   \|\|https:\/\/example\.com\/1\|\|/);
+  assert.match(message, /Item two   :   \|\|https:\/\/example\.com\/2\|\|/);
+  assert.match(message, /\*\*NAYTRU  POLICY\*\*/);
+  assert.match(message, /must   vouch   within  \*\*12\*\*  hours/);
+  assert.doesNotMatch(message, /Product: NAYTRO/);
+});
+
+test('DEKOR order DM uses its policy layout and supports five censored links', () => {
+  const orders = Array.from({ length: 5 }, (_, index) => ({
+    item: `Item ${index + 1}`,
+    link: `https://example.com/${index + 1}`,
+  }));
+  const message = dmsOrderMessage(orders, 'DEKOR');
+  for (const { item, link } of orders) {
+    assert.ok(message.includes(`_ _   ${item}   :   ||${link}||`));
+  }
+  assert.match(message, /\*\*DEKOR   POLICY\*\*/);
+  assert.match(message, /must vouch within \*\*12\*\* hours/);
+  assert.match(message, /regen    =    the   10\+    hours/);
+  assert.doesNotMatch(message, /Product: DEKOR/);
 });
 
 test('order DM message supports five item/link pairs in order', () => {

@@ -137,6 +137,27 @@ test('completion reminder sent to the order ticket bypasses V2 container convers
   assert.deepEqual(sentPayload.allowedMentions, { parse: [] });
 });
 
+test('order DMs stay plain text and suppress link previews', async () => {
+  let sentPayload;
+  await sendV2({
+    send: async (payload) => {
+      sentPayload = payload;
+      return payload;
+    },
+  }, standardPayload({
+    content: 'Order details with a ||https://example.com/order|| link',
+    allowedMentions: { parse: [] },
+    flags: MessageFlags.SuppressEmbeds,
+  }));
+
+  assert.match(sentPayload.content, /\|\|https:\/\/example\.com\/order\|\|/);
+  assert.equal(sentPayload.components, undefined);
+  assert.equal(sentPayload.embeds, undefined);
+  assert.equal(sentPayload.flags, MessageFlags.SuppressEmbeds);
+  assert.equal(sentPayload.flags & MessageFlags.IsComponentsV2, 0);
+  assert.deepEqual(sentPayload.allowedMentions, { parse: [] });
+});
+
 test('/tip send bypasses V2 container conversion and keeps its buyer mention', async () => {
   let sentPayload;
   await sendV2({

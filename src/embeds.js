@@ -507,12 +507,55 @@ function queueConfirmationMessage(order) {
   return orderQueueText(order);
 }
 
-function dmsOrderMessage(orders) {
+function dmsOrderMessage(orders, product) {
+  if (product === 'NAYTRO') {
+    return [
+      '_ _',
+      '_ _ :dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita:',
+      '_ _',
+      '_ _           **__a   gift   from   𝓓olce   𝓥ita__**   :lavendercupcake:',
+      '_ _',
+      ...orders.map(({ item, link }) => `_ _   ${item}   :   ||${link}||`),
+      '_ _',
+      '_ _ :dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita:',
+      '_ _',
+      '_ _                  **NAYTRU  POLICY**  :0cpink_bow:',
+      '_ _',
+      '_ _ :cherry_blossom4:   please  read  the  naytru  policy.',
+      '_ _ :cherry_blossom4:   must   vouch   within  **12**  hours.',
+      '_ _ :cherry_blossom4:   no  vouch = no regen / warranty.',
+      '_ _',
+      '_ _ :emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76:',
+      '_ _',
+    ].join('\n');
+  }
+  if (product === 'DEKOR') {
+    return [
+      '_ _',
+      '_ _ <:dolcevita:1567562982634950746><:dolcevita:1567562829001658428><:dolcevita:1567562982634950746><:dolcevita:1567562829001658428><:dolcevita:1567562982634950746><:dolcevita:1567562829001658428><:dolcevita:1567562982634950746><:dolcevita:1567562829001658428><:dolcevita:1567562982634950746><:dolcevita:1567562829001658428><:dolcevita:1567562982634950746><:dolcevita:1567562829001658428><:dolcevita:1567562982634950746><:dolcevita:1567562829001658428>',
+      '_ _',
+      '_ _           **__a   gift   from   𝓓olce   𝓥ita__**   <:lavendercupcake:1562825401309335573>',
+      '_ _',
+      ...orders.map(({ item, link }) => `_ _   ${item}   :   ||${link}||`),
+      '_ _',
+      '_ _ <:dolcevita:1567562931326025738><:dolcevita:1567562829001658428><:dolcevita:1567562931326025738><:dolcevita:1567562829001658428><:dolcevita:1567562931326025738><:dolcevita:1567562829001658428><:dolcevita:1567562931326025738><:dolcevita:1567562829001658428><:dolcevita:1567562931326025738><:dolcevita:1567562829001658428><:dolcevita:1567562931326025738><:dolcevita:1567562829001658428><:dolcevita:1567562931326025738><:dolcevita:1567562829001658428>',
+      '_ _',
+      '_ _                  **DEKOR   POLICY**   <:0cpink_bow:1562803659190829126>',
+      '_ _',
+      '_ _ <:cherry_blossom4:1562814208318378145>  pls   read  the  dekor  policy.',
+      '_ _ <:cherry_blossom4:1562814208318378145>  must vouch within **12** hours.',
+      '_ _ <:cherry_blossom4:1562814208318378145>  regen    =    the   10+    hours.',
+      '_ _ <:cherry_blossom4:1562814208318378145>  no    vouch   =   no  warranty.',
+      '_ _',
+      '_ _ <:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312><:emoji_76:1568474279362957312>',
+    ].join('\n');
+  }
   return [
     '_ _',
     '## _ _  (  <:purplecandy:1557485716223828088>  )   Dolce Vita !',
     '_ _ ════════════════════════',
     '',
+    ...(product ? [`_ _     Product: ${product}`, ''] : []),
     ...orders.map(({ item, link }) => `_ _     (${item}) - (||${link}||)`),
     '',
     '_ _ ════════════════════════',
@@ -525,6 +568,15 @@ function dmsOrderMessage(orders) {
     '_ _       tysm for buying!',
     '_ _',
   ].join('\n');
+}
+
+function dmsOrderProductButtons(formId) {
+  return new ActionRowBuilder().addComponents(
+    ...['NAYTRO', 'PREMS', 'DEKOR'].map((product) => new ButtonBuilder()
+      .setCustomId(`dmsorder:product:${formId}:${product}`)
+      .setLabel(product)
+      .setStyle(ButtonStyle.Primary)),
+  );
 }
 
 function helpEmbed(commands) {
@@ -787,7 +839,7 @@ function dmsOrderFormModal(formId, startItemNumber = 1) {
     ]));
 }
 
-function dmsOrderFormButtons(formId, nextItemNumber) {
+function dmsOrderFormButtons(formId, nextItemNumber, product) {
   const buttons = [];
   if (nextItemNumber <= 5) {
     buttons.push(new ButtonBuilder()
@@ -797,7 +849,7 @@ function dmsOrderFormButtons(formId, nextItemNumber) {
   }
   buttons.push(new ButtonBuilder()
     .setCustomId(`dmsorder:send:${formId}`)
-    .setLabel('Send order DM')
+    .setLabel(['NAYTRO', 'DEKOR'].includes(product) ? 'Submit' : 'Send order DM')
     .setStyle(ButtonStyle.Success));
   return new ActionRowBuilder().addComponents(...buttons);
 }
@@ -855,6 +907,7 @@ module.exports = {
   queueConfirmationMessage,
   SHOP_ANNOUNCEMENT_ROLE_ID,
   dmsOrderMessage,
+  dmsOrderProductButtons,
   dmsOrderFormModal,
   dmsOrderFormButtons,
   reportTicketModal,

@@ -45,6 +45,7 @@ const {
   tipMessage,
   SHOP_ANNOUNCEMENT_ROLE_ID,
   dmsOrderMessage,
+  dmsOrderProductButtons,
   dmsOrderFormModal,
   dmsOrderFormButtons,
   robuxAvailabilityMessage,
@@ -389,8 +390,8 @@ async function handleDmsOrderFormSubmit(interaction) {
   form.nextItemNumber = startItemNumber + pairCount;
   form.expiresAt = Date.now() + DMS_ORDER_FORM_DURATION_MS;
   return interaction.reply({
-    content: `Added ${parsed.value.length === 1 ? '1 item' : `${parsed.value.length} items`}. Add more items or send the order DM.`,
-    components: [dmsOrderFormButtons(formId, form.nextItemNumber)],
+    content: `Added ${parsed.value.length === 1 ? '1 item' : `${parsed.value.length} items`}. Add more items or ${['NAYTRO', 'DEKOR'].includes(form.product) ? 'submit' : 'send the order DM'}.`,
+    components: [dmsOrderFormButtons(formId, form.nextItemNumber, form.product)],
     ephemeral: true,
   });
 }
@@ -407,6 +408,13 @@ async function handleDmsOrderFormButton(interaction) {
     return interaction.reply({ content: 'Only the configured `/setowner` role and the staff member who started this form can continue it.', ephemeral: true });
   }
   form.expiresAt = Date.now() + DMS_ORDER_FORM_DURATION_MS;
+  if (action === 'product') {
+    if (!['NAYTRO', 'PREMS', 'DEKOR'].includes(nextItemText)) {
+      return interaction.reply({ content: 'This product selection is not valid.', ephemeral: true });
+    }
+    form.product = nextItemText;
+    return interaction.showModal(dmsOrderFormModal(formId));
+  }
   if (action === 'next') {
     const nextItemNumber = Number(nextItemText);
     if (form.nextItemNumber !== nextItemNumber || nextItemNumber > 5) {
@@ -424,10 +432,11 @@ async function handleDmsOrderFormButton(interaction) {
   await interaction.deferReply({ ephemeral: true });
   try {
     const user = await client.users.fetch(form.buyerId);
-    await sendV2(user, {
-      content: dmsOrderMessage(form.orders),
+    await sendV2(user, standardPayload({
+      content: dmsOrderMessage(form.orders, form.product),
       allowedMentions: { parse: [] },
-    });
+      flags: MessageFlags.SuppressEmbeds,
+    }));
     pendingDmsOrderForms.delete(formId);
     return interaction.editReply({ content: `Order message sent to ${user}.` });
   } catch (error) {
@@ -1702,7 +1711,10 @@ async function handleCommand(interaction) {
       expiresAt: Date.now() + DMS_ORDER_FORM_DURATION_MS,
       sending: false,
     });
-    return interaction.showModal(dmsOrderFormModal(formId));
+    return interaction.reply({
+      components: [dmsOrderProductButtons(formId)],
+      ephemeral: true,
+    });
   }
 
   if (interaction.commandName === 'robuxavail') {
