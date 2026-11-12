@@ -88,7 +88,7 @@ const { parseTicketMessageCommand } = require('./ticket-message-commands');
 const { parseOrderTicketForm } = require('./order-ticket-form');
 const { parseOrderVouchForm } = require('./order-vouch-form');
 const { parseOthersTicketForm } = require('./others-ticket-form');
-const { parseDmsOrderForm } = require('./dms-order-form');
+const { parseDmsOrderForm, parseDmsPremsForm } = require('./dms-order-form');
 const { calculateExpression } = require('./multiplication');
 const { replyThenDeleteCommand } = require('./message-command-actions');
 const {
@@ -375,6 +375,24 @@ async function handleDmsOrderFormSubmit(interaction) {
   if (![1, 3, 5].includes(startItemNumber)) {
     return interaction.reply({ content: 'This order form step is not valid. Run `/dmsorder` again to start a new one.', ephemeral: true });
   }
+  if (form.product === 'PREMS') {
+    const parsed = parseDmsPremsForm({
+      premName: interaction.fields.fields.get('prem-name')?.value ?? '',
+      email: interaction.fields.fields.get('prem-email')?.value ?? '',
+      password: interaction.fields.fields.get('prem-password')?.value ?? '',
+    });
+    if (parsed.error) {
+      return interaction.reply({ content: parsed.error, ephemeral: true });
+    }
+    form.orders = [parsed.value];
+    form.nextItemNumber = 6;
+    form.expiresAt = Date.now() + DMS_ORDER_FORM_DURATION_MS;
+    return interaction.reply({
+      content: 'PREMS details saved. Submit the order DM when ready.',
+      components: [dmsOrderFormButtons(formId, form.nextItemNumber, form.product)],
+      ephemeral: true,
+    });
+  }
   const pairCount = Math.min(2, 6 - startItemNumber);
   const parsed = parseDmsOrderForm(Array.from({ length: pairCount }, (_, index) => {
     const itemNumber = startItemNumber + index;
@@ -413,14 +431,14 @@ async function handleDmsOrderFormButton(interaction) {
       return interaction.reply({ content: 'This product selection is not valid.', ephemeral: true });
     }
     form.product = nextItemText;
-    return interaction.showModal(dmsOrderFormModal(formId));
+    return interaction.showModal(dmsOrderFormModal(formId, 1, form.product));
   }
   if (action === 'next') {
     const nextItemNumber = Number(nextItemText);
     if (form.nextItemNumber !== nextItemNumber || nextItemNumber > 5) {
       return interaction.reply({ content: 'This order form step is no longer active. Use the latest form to continue.', ephemeral: true });
     }
-    return interaction.showModal(dmsOrderFormModal(formId, nextItemNumber));
+    return interaction.showModal(dmsOrderFormModal(formId, nextItemNumber, form.product));
   }
   if (action !== 'send') {
     return interaction.reply({ content: 'This order form action is not valid.', ephemeral: true });

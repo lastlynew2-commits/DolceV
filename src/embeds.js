@@ -508,24 +508,49 @@ function queueConfirmationMessage(order) {
 }
 
 function dmsOrderMessage(orders, product) {
+  if (product === 'PREMS' && orders[0]?.premName) {
+    const [{ premName, email, password }] = orders;
+    return [
+      '_ _',
+      `_ _ ${'<:dolcevita:1567562982634950746><:dolcevita:1567562829001658428>'.repeat(7)}`,
+      '_ _',
+      '_ _           **__a   gift   from   𝓓olce   𝓥ita__**   <:lavendercupcake:1562825401309335573>',
+      '_ _',
+      `_ _   item   :   ${premName}`,
+      `_ _   email  :   ${email}`,
+      `_ _   pass   :   ${password}`,
+      '_ _',
+      `_ _ ${'<:dolcevita:1567562931326025738><:dolcevita:1567562829001658428>'.repeat(7)}`,
+      '_ _',
+      '_ _              **PREM  ACC  POLICY**  <:0cpink_bow:1562803659190829126>',
+      '_ _',
+      '_ _ <:cherry_blossom4:1562814208318378145>  please  read the prem acc rules.',
+      '_ _ <:cherry_blossom4:1562814208318378145>  must   vouch   within   **12**  hours.',
+      '_ _ <:cherry_blossom4:1562814208318378145>  vouch    with    proof   of   log-in.',
+      '_ _ <:cherry_blossom4:1562814208318378145>  no     vouch     =     no    warranty.',
+      '_ _',
+      `_ _ ${'<:emoji_76:1568474279362957312>'.repeat(14)}`,
+      '_ _',
+    ].join('\n');
+  }
   if (product === 'NAYTRO') {
     return [
       '_ _',
-      '_ _ :dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita::dolcevita~3::dolcevita:',
+      `_ _ ${'<:dolcevita:1567562982634950746><:dolcevita:1567562829001658428>'.repeat(7)}`,
       '_ _',
-      '_ _           **__a   gift   from   𝓓olce   𝓥ita__**   :lavendercupcake:',
+      '_ _           **__a   gift   from   𝓓olce   𝓥ita__**   <:lavendercupcake:1562825401309335573>',
       '_ _',
       ...orders.map(({ item, link }) => `_ _   ${item}   :   ||${link}||`),
       '_ _',
-      '_ _ :dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita::dolcevita~2::dolcevita:',
+      `_ _ ${'<:dolcevita:1567562931326025738><:dolcevita:1567562829001658428>'.repeat(7)}`,
       '_ _',
-      '_ _                  **NAYTRU  POLICY**  :0cpink_bow:',
+      '_ _                  **NAYTRU  POLICY**  <:0cpink_bow:1562803659190829126>',
       '_ _',
-      '_ _ :cherry_blossom4:   please  read  the  naytru  policy.',
-      '_ _ :cherry_blossom4:   must   vouch   within  **12**  hours.',
-      '_ _ :cherry_blossom4:   no  vouch = no regen / warranty.',
+      '_ _ <:cherry_blossom4:1562814208318378145>   please  read  the  naytru  policy.',
+      '_ _ <:cherry_blossom4:1562814208318378145>   must   vouch   within  **12**  hours.',
+      '_ _ <:cherry_blossom4:1562814208318378145>   no  vouch = no regen / warranty.',
       '_ _',
-      '_ _ :emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76::emoji_76:',
+      `_ _ ${'<:emoji_76:1568474279362957312>'.repeat(14)}`,
       '_ _',
     ].join('\n');
   }
@@ -575,7 +600,7 @@ function dmsOrderProductButtons(formId) {
     ...['NAYTRO', 'PREMS', 'DEKOR'].map((product) => new ButtonBuilder()
       .setCustomId(`dmsorder:product:${formId}:${product}`)
       .setLabel(product)
-      .setStyle(ButtonStyle.Primary)),
+      .setStyle(ButtonStyle.Secondary)),
   );
 }
 
@@ -811,7 +836,41 @@ function ticketCloseReasonModal(confirmationId) {
     );
 }
 
-function dmsOrderFormModal(formId, startItemNumber = 1) {
+function dmsOrderFormModal(formId, startItemNumber = 1, product) {
+  if (product === 'PREMS') {
+    return new ModalBuilder()
+      .setCustomId(`dmsorder:form:${formId}:${startItemNumber}`)
+      .setTitle('DOLCE VITA ORDER DM')
+      .addLabelComponents(
+        new LabelBuilder({
+          label: 'PREM NAME',
+          component: new TextInputBuilder()
+            .setCustomId('prem-name')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter the PREM account name')
+            .setMaxLength(200)
+            .setRequired(true),
+        }),
+        new LabelBuilder({
+          label: 'EMAIL',
+          component: new TextInputBuilder()
+            .setCustomId('prem-email')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter the account email')
+            .setMaxLength(320)
+            .setRequired(true),
+        }),
+        new LabelBuilder({
+          label: 'PASSWORD',
+          component: new TextInputBuilder()
+            .setCustomId('prem-password')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter the account password')
+            .setMaxLength(1024)
+            .setRequired(true),
+        }),
+      );
+  }
   const pairCount = Math.min(2, 6 - startItemNumber);
   const itemNumbers = Array.from({ length: pairCount }, (_, index) => startItemNumber + index);
   return new ModalBuilder()
@@ -841,7 +900,7 @@ function dmsOrderFormModal(formId, startItemNumber = 1) {
 
 function dmsOrderFormButtons(formId, nextItemNumber, product) {
   const buttons = [];
-  if (nextItemNumber <= 5) {
+  if (product !== 'PREMS' && nextItemNumber <= 5) {
     buttons.push(new ButtonBuilder()
       .setCustomId(`dmsorder:next:${formId}:${nextItemNumber}`)
       .setLabel(`Add item${nextItemNumber === 3 ? 's 3–4' : ' 5'}`)
@@ -849,7 +908,7 @@ function dmsOrderFormButtons(formId, nextItemNumber, product) {
   }
   buttons.push(new ButtonBuilder()
     .setCustomId(`dmsorder:send:${formId}`)
-    .setLabel(['NAYTRO', 'DEKOR'].includes(product) ? 'Submit' : 'Send order DM')
+    .setLabel(['NAYTRO', 'PREMS', 'DEKOR'].includes(product) ? 'Submit' : 'Send order DM')
     .setStyle(ButtonStyle.Success));
   return new ActionRowBuilder().addComponents(...buttons);
 }

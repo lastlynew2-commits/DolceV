@@ -28,4 +28,17 @@ function parseDmsOrderForm(entries, startItemNumber = 1) {
   return { value: orders };
 }
 
-module.exports = { parseDmsOrderForm };
+function parseDmsPremsForm(fields) {
+  const premName = String(fields.premName ?? '').trim();
+  const email = String(fields.email ?? '').trim();
+  const password = String(fields.password ?? '');
+  if (!premName || !email || !password.trim()) {
+    return { error: 'Enter the PREM name, email, and password.' };
+  }
+  if (premName.length > 200 || email.length > 320 || password.length > 1024) {
+    return { error: 'The PREM name, email, or password is too long.' };
+  }
+  return { value: { premName, email, password } };
+}
+
+module.exports = { parseDmsOrderForm, parseDmsPremsForm };

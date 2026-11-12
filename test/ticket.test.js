@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
+const { ButtonStyle } = require('discord.js');
 const {
   orderTicketModal,
   ticketPanelButtons,
@@ -58,7 +59,7 @@ const {
 const { voidedOrderMessage } = require('../src/embeds');
 const { parseOrderTicketForm } = require('../src/order-ticket-form');
 const { parseOthersTicketForm } = require('../src/others-ticket-form');
-const { parseDmsOrderForm } = require('../src/dms-order-form');
+const { parseDmsOrderForm, parseDmsPremsForm } = require('../src/dms-order-form');
 const { multiplyAmounts, calculateExpression } = require('../src/multiplication');
 const { sendThenDeleteCommand } = require('../src/message-command-actions');
 const { setVoidedRole } = require('../src/voided-role');
@@ -988,6 +989,15 @@ test('/dmsorder opens separate item and link fields in up to three modal steps',
     { label: 'ITEM 5', customId: 'item5', required: true },
     { label: 'LINK 5', customId: 'link5', required: true },
   ]);
+  assert.deepEqual(dmsOrderFormModal('form-123', 1, 'PREMS').toJSON().components.map(({ label, component }) => ({
+    label,
+    customId: component.custom_id,
+    required: component.required,
+  })), [
+    { label: 'PREM NAME', customId: 'prem-name', required: true },
+    { label: 'EMAIL', customId: 'prem-email', required: true },
+    { label: 'PASSWORD', customId: 'prem-password', required: true },
+  ]);
   const buttons = dmsOrderFormButtons('form-123', 3).toJSON().components;
   assert.deepEqual(buttons.map(({ custom_id, label }) => [custom_id, label]), [
     ['dmsorder:next:form-123:3', 'Add items 3–4'],
@@ -997,12 +1007,17 @@ test('/dmsorder opens separate item and link fields in up to three modal steps',
     .some(({ label }) => label === 'Submit'));
   assert.ok(dmsOrderFormButtons('form-123', 5, 'DEKOR').toJSON().components
     .some(({ label }) => label === 'Submit'));
+  assert.deepEqual(dmsOrderFormButtons('form-123', 6, 'PREMS').toJSON().components
+    .map(({ custom_id, label }) => [custom_id, label]), [
+    ['dmsorder:send:form-123', 'Submit'],
+  ]);
   const productButtons = dmsOrderProductButtons('form-123').toJSON().components;
   assert.deepEqual(productButtons.map(({ custom_id, label }) => [custom_id, label]), [
     ['dmsorder:product:form-123:NAYTRO', 'NAYTRO'],
     ['dmsorder:product:form-123:PREMS', 'PREMS'],
     ['dmsorder:product:form-123:DEKOR', 'DEKOR'],
   ]);
+  assert.ok(productButtons.every(({ style }) => style === ButtonStyle.Secondary));
 });
 
 test('order DM form parses item/link pairs and validates optional entries', () => {
@@ -1022,6 +1037,21 @@ test('order DM form parses item/link pairs and validates optional entries', () =
   assert.match(parseDmsOrderForm([{ item: 'PREMS', link: '' }]).error, /both item 1 and its order link/);
   assert.match(parseDmsOrderForm([{ item: 'PREMS', link: 'javascript:alert(1)' }]).error, /valid http or https/);
   assert.match(parseDmsOrderForm([{ item: '', link: '' }]).error, /item 1 and its order link/);
+});
+
+test('PREMS order form requires one account name, email, and password', () => {
+  assert.deepEqual(parseDmsPremsForm({
+    premName: '  Premium account  ',
+    email: '  buyer@example.com  ',
+    password: ' pass with spaces ',
+  }), {
+    value: {
+      premName: 'Premium account',
+      email: 'buyer@example.com',
+      password: ' pass with spaces ',
+    },
+  });
+  assert.match(parseDmsPremsForm({ premName: '', email: 'buyer@example.com', password: 'secret' }).error, /PREM name, email, and password/);
 });
 
 test('order DM message preserves the warranty text and spoiler-wraps the link', () => {
@@ -1047,6 +1077,27 @@ test('NAYTRO order DM uses its policy layout and censors every submitted link', 
   assert.match(message, /\*\*NAYTRU  POLICY\*\*/);
   assert.match(message, /must   vouch   within  \*\*12\*\*  hours/);
   assert.doesNotMatch(message, /Product: NAYTRO/);
+  assert.match(message, /<:dolcevita:1567562982634950746>/);
+  assert.match(message, /<:lavendercupcake:1562825401309335573>/);
+  assert.match(message, /<:0cpink_bow:1562803659190829126>/);
+  assert.match(message, /<:cherry_blossom4:1562814208318378145>/);
+  assert.match(message, /<:emoji_76:1568474279362957312>/);
+  assert.doesNotMatch(message, /(?<!<):[a-z0-9_~]+:/);
+});
+
+test('PREMS order DM uses the account details layout and policy', () => {
+  const message = dmsOrderMessage([{
+    premName: 'Premium account',
+    email: 'buyer@example.com',
+    password: 'secret',
+  }], 'PREMS');
+  assert.match(message, /_ _   item   :   Premium account/);
+  assert.match(message, /_ _   email  :   buyer@example\.com/);
+  assert.match(message, /_ _   pass   :   secret/);
+  assert.match(message, /\*\*PREM  ACC  POLICY\*\*/);
+  assert.match(message, /proof   of   log-in/);
+  assert.match(message, /<:0cpink_bow:1562803659190829126>/);
+  assert.doesNotMatch(message, /Product: PREMS/);
 });
 
 test('DEKOR order DM uses its policy layout and supports five censored links', () => {
